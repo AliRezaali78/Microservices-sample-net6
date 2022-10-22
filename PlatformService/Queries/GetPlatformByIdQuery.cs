@@ -1,0 +1,1 @@
+public record GetPlatformByIdQuery(int Id) : IQuery<PlatformReadDto?>;

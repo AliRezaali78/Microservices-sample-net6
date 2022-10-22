@@ -1,0 +1,1 @@
+public record CreatePlatformCommand(PlatformCreateDto CreateDto) : ICommand<PlatformReadDto>;

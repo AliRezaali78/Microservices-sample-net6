@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mssql-platforms-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mssql-platforms
+  template:
+    metadata:
+      labels:
+        app: mssql-platforms
+    spec:
+      containers:
+        - name: mssql-platforms
+          image: mcr.microsoft.com/mssql/server:2017-latest
+          ports:
+            - containerPort: 1433 # default mssql port
+          env:
+            - name: MSSQL_PID
+              value: "Express"
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: "SA_PASSWORD" # name of environment
+              valueFrom:
+                secretKeyRef:
+                  name: mssql # secret name that we specified
+                  key: SA_PASSWORD # name of the key
+          volumeMounts:
+            - mountPath: /var/opt/mssql/data # Linux based path
+              name: mssqldb # *
+      volumes:
+        - name: mssqldb # *
+          persistentVolumeClaim:
+            claimName: mssql-claim # name that we specified in local-persistent-volume.yml file
+--- # Cluster Ip
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mssql-platforms-clusterip-service
+spec:
+  type: ClusterIP
+  selector:
+    app: mssql-platforms # name of the app specified abov
+  ports:
+    - name: mssql-platforms
+      protocol: TCP
+      port: 1433
+      targetPort: 1433 # default mssql port
+
+--- # load balancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: mssql-platforms-loadbalancer
+spec:
+  type: LoadBalancer
+  selector:
+    app: mssql-platforms
+  ports:
+    - protocol: TCP
+      port: 1433
+      targetPort: 1433
